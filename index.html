@@ -1,1 +1,122 @@
-Hello world!
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WiFi连接服务</title>
+    <style>
+        /* 保持原有样式不变 */
+        body { margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
+        .top-section { flex: 4; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; position: relative; }
+        .ad-section { flex: 6; background-color: #fff; overflow: hidden; }
+        .connect-btn { padding: 15px 30px; font-size: 18px; background-color: #007bff; color: white; border: none; border-radius: 25px; cursor: pointer; }
+        .loading-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255, 255, 255, 0.9); 
+            display: flex; justify-content: center; align-items: center; transition: opacity 0.5s; }
+        .loader { border: 5px solid #f3f3f3; border-top: 5px solid #007bff; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .ad-container { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: #eee; }
+        .ad-placeholder { width: 90%; height: 90%; background: #ccc; display: flex; align-items: center; justify-content: center; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="top-section">
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loader"></div>
+        </div>
+        <button class="connect-btn" id="connectBtn">一键连接WiFi</button>
+    </div>
+    
+    <div class="ad-section">
+        <div class="ad-container">
+            <!-- 实际广告代码替换区域 -->
+            <div class="ad-placeholder">
+                <h2>广告位（实际接入广告SDK）</h2>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 通用参数解析
+        function getUrlParams() {
+            const params = new URLSearchParams(window.location.search);
+            return {
+                ssid: decodeURIComponent(params.get('ssid') || ''),
+                password: decodeURIComponent(params.get('password') || '')
+            };
+        }
+
+        // 平台检测
+        function detectPlatform() {
+            const ua = navigator.userAgent;
+            if (/android/i.test(ua)) return 'android';
+            if (/ipad|iphone|ipod/i.test(ua)) return 'ios';
+            return 'other';
+        }
+
+        // 连接功能实现
+        function connectHandler() {
+            const { ssid, password } = getUrlParams();
+            if (!ssid || !password) return alert('缺少WiFi参数');
+
+            const platform = detectPlatform();
+            
+            // Android处理逻辑
+            if (platform === 'android') {
+                try {
+                    // 尝试调起原生WLAN配置界面
+                    const intentUrl = `intent://wifi/connect?ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}#Intent;scheme=myapp;package=com.android.settings;end`;
+                    window.location.href = intentUrl;
+                    
+                    // 备用方案：跳转系统设置界面
+                    setTimeout(() => {
+                        window.location.href = 'android.settings.WIFI_SETTINGS';
+                    }, 500);
+                } catch (e) {
+                    alert('请使用系统浏览器打开');
+                }
+            }
+            // iOS处理逻辑
+            else if (platform === 'ios') {
+                // iOS 13+无法直接跳转设置，使用通用提示方案
+                if (confirm('即将跳转到WiFi设置页面\n请手动选择网络："'+ssid+'"')) {
+                    try {
+                        // 旧版iOS跳转方案
+                        window.location.href = 'App-Prefs:root=WIFI';
+                        window.location.href = 'prefs:root=WIFI';
+                    } catch (e) {
+                        // 新版iOS跳转到系统设置
+                        window.open('app-settings:');
+                    }
+                }
+            }
+            else {
+                alert('请在手机浏览器中打开本页面');
+            }
+        }
+
+        // 页面初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('connectBtn');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+
+            // 强制广告展示计时
+            setTimeout(() => {
+                loadingOverlay.style.opacity = '0';
+                setTimeout(() => {
+                    loadingOverlay.style.display = 'none';
+                    btn.style.display = 'block';
+                }, 500);
+            }, 3500); // 广告展示时间3.5秒
+
+            // 绑定点击事件
+            btn.addEventListener('click', connectHandler);
+            
+            // 安卓微信环境特殊处理
+            if (/MicroMessenger/i.test(navigator.userAgent) && detectPlatform() === 'android') {
+                btn.innerHTML = '点击后选择「浏览器打开」';
+                btn.style.backgroundColor = '#ff4444';
+            }
+        });
+    </script>
+</body>
+</html>
